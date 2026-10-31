@@ -1,0 +1,20 @@
+kind: wasmer.io/App.v0
+owner: carlosklaro
+name: canedo-agua-inteligente
+package: .
+capabilities:
+  database:
+    engine: postgres
+locality:
+  regions:
+    - ca-beau1
+health_checks:
+  - http:
+      method: get
+      path: /api/health
+      interval: 30s
+      timeout: 10s
+      unhealthy_threshold: 2
+      healthy_threshold: 1
+      expected_status_codes:
+        - 200

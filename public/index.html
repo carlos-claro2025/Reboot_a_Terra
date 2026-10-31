@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#126b86">
+  <meta name="description" content="Informação e ferramentas para o uso consciente da água em Senador Canedo-GO.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <title>Canedo Água Inteligente</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="#inicio"><span class="brand-mark">💧</span><span>Canedo Água<br><strong>Inteligente</strong></span></a>
+      <nav aria-label="Navegação principal">
+        <a href="#inicio">Início</a><a href="#ferramentas">Ferramentas</a><a href="#comunidade">Comunidade</a><a href="#assistente">Assistente</a>
+      </nav>
+      <span class="demo-badge">● Modo demonstração</span>
+    </div>
+  </header>
+
+  <main id="inicio" class="container">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">SENADOR CANEDO · GOIÁS</p>
+        <h1>Água bem cuidada,<br><span>cidade preparada.</span></h1>
+        <p class="hero-copy">Informação simples para decisões melhores: acompanhe o risco hídrico, economize em casa e participe do cuidado com a nossa cidade.</p>
+        <a class="button primary" href="#ferramentas">Explorar ferramentas <span>→</span></a>
+      </div>
+      <div class="water-art" aria-hidden="true"><div class="sun"></div><div class="hill hill-one"></div><div class="hill hill-two"></div><div class="drop">💧</div></div>
+    </section>
+
+    <section class="section" aria-labelledby="dashboard-title">
+      <div class="section-heading"><div><p class="eyebrow">PAINEL DE HOJE</p><h2 id="dashboard-title">Como está a água em Senador Canedo?</h2></div><span class="update" id="updated-at">Atualizando...</span></div>
+      <div class="dashboard-grid">
+        <article class="card risk-card"><div class="card-top"><span>Risco hídrico</span><span class="info">i</span></div><div class="risk-score"><strong id="risk-score">--</strong><span>/100</span></div><div class="risk-meter"><i id="risk-meter"></i></div><span class="risk-level" id="risk-level">Carregando</span><p id="risk-recommendation">Calculando recomendação...</p><div class="explanation" id="risk-explanation"></div></article>
+        <article class="card metric"><span>Temperatura</span><strong id="temperature">--</strong><small>°C</small><p>☀️ Sensação de calor</p></article>
+        <article class="card metric"><span>Umidade</span><strong id="humidity">--</strong><small>%</small><p>💧 Umidade relativa</p></article>
+        <article class="card metric"><span>Chuva recente</span><strong id="rainfall">--</strong><small>mm</small><p>☔ Últimas 24 horas</p></article>
+        <article class="card metric"><span>Dias sem chuva</span><strong id="dry-days">--</strong><small>dias</small><p>📅 Desde a última chuva</p></article>
+      </div>
+    </section>
+
+    <section id="ferramentas" class="section">
+      <div class="section-heading"><div><p class="eyebrow">FERRAMENTAS</p><h2>Pequenas ações, grande impacto</h2></div></div>
+      <div class="tools-grid">
+        <article class="card tool-card"><div class="tool-icon">🏠</div><h3>Consumo residencial</h3><p>Estime o consumo da sua casa e descubra onde economizar.</p><form id="consumption-form" class="form-grid"><label>Moradores<input name="residents" type="number" value="3" min="1"></label><label>Banho (min)<input name="showerMinutes" type="number" value="8" min="1"></label><label>Cargas de roupa/mês<input name="laundryLoads" type="number" value="12" min="0"></label><label>Jardim (L/dia)<input name="gardenLiters" type="number" value="20" min="0"></label><button class="button primary" type="submit">Calcular consumo</button></form><div class="result" id="consumption-result"></div></article>
+        <article class="card tool-card"><div class="tool-icon">🌱</div><h3>Recomendação de irrigação</h3><p>Use a quantidade certa de água para suas plantas.</p><form id="irrigation-form" class="form-grid"><label>Área (m²)<input name="areaM2" type="number" value="20" min="1"></label><label>Cultura<select name="crop"><option value="horta">Horta</option><option value="gramado">Gramado</option><option value="flores">Flores</option><option value="cafe">Café</option></select></label><label>Solo<select name="soil"><option value="media">Médio</option><option value="arenosa">Arenoso</option><option value="argilosa">Argiloso</option></select></label><label>Dias desde chuva<input name="rainDays" type="number" value="4" min="0"></label><button class="button primary" type="submit">Calcular irrigação</button></form><div class="result" id="irrigation-result"></div></article>
+      </div>
+    </section>
+
+    <section id="comunidade" class="section community">    <div class="section-heading"><div><p class="eyebrow">COMUNIDADE</p><h2>Relatos que ajudam a cidade</h2></div><button class="button secondary" id="show-report">+ Novo relato</button></div><div class="community-grid"><div class="card reports"><div class="report-tabs"><button class="tab active" id="list-view" type="button">Lista</button><button class="tab" id="map-view" type="button">Mapa</button></div><div id="reports-list"></div><div id="reports-map" class="reports-map hidden" aria-label="Mapa esquemático dos relatos"></div></div><form class="card report-form hidden" id="report-form"><h3>Registrar um relato</h3><label>Tipo<select name="type"><option value="vazamento">Vazamento</option><option value="falta-agua">Falta ou baixa pressão</option><option value="qualidade">Qualidade da água</option><option value="outro">Outro</option></select></label><label>Título<input name="title" required minlength="5" placeholder="Ex.: Vazamento na rua"></label><label>Bairro<input name="neighborhood" placeholder="Seu bairro"></label><label>Descrição<textarea name="description" required minlength="10" rows="4" placeholder="Conte o que você observou"></textarea></label><div class="location-fields"><label>Latitude<input name="lat" type="number" step="any" placeholder="-16.7"></label><label>Longitude<input name="lng" type="number" step="any" placeholder="-49.09"></label></div><p class="field-help">Opcional: use a localização do mapa ou deixe em branco.</p><div><button class="button primary" type="submit">Enviar relato</button> <button class="button ghost" type="button" id="cancel-report">Cancelar</button></div><p class="form-message" id="report-message"></p></form></div></section>
+
+    <section id="assistente" class="section assistant-section"><div class="assistant-copy"><p class="eyebrow">ORIENTAÇÃO</p><h2>Tem uma dúvida?<br><span>Fale com o assistente.</span></h2><p>Orientações rápidas sobre economia, vazamentos, chuva e irrigação. O modo local funciona mesmo sem chave de IA.</p></div><div class="card chat"><div class="chat-messages" id="chat-messages"><div class="message bot">Olá! Sou o assistente do Canedo Água Inteligente. Como posso ajudar?</div></div><form id="assistant-form"><input name="message" autocomplete="off" placeholder="Digite sua dúvida..." required><button class="button primary" aria-label="Enviar">→</button></form><small>● Respostas locais disponíveis em modo demonstração</small></div></section>
+  </main>
+  <footer><div class="container"><strong>Canedo Água Inteligente</strong><span>MVP demonstrativo · Dados simulados para Senador Canedo-GO</span><span>Licença MIT</span></div></footer>
+  <script src="/app.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+</body>
+</html>

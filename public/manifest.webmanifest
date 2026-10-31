@@ -1,0 +1,11 @@
+{
+  "name": "Canedo Água Inteligente",
+  "short_name": "Canedo Água",
+  "description": "Uso consciente da água em Senador Canedo-GO",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7fbf8",
+  "theme_color": "#126b86",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
