@@ -1,20 +1,32 @@
 kind: wasmer.io/App.v0
-owner: carlosklaro
 name: canedo-agua-inteligente
+owner: carlosklaro
 package: .
+locality:
+  regions:
+  - ca-beau1
 capabilities:
   database:
     engine: postgres
-locality:
-  regions:
-    - ca-beau1
-health_checks:
-  - http:
-      method: get
-      path: /api/health
-      interval: 30s
-      timeout: 10s
-      unhealthy_threshold: 2
-      healthy_threshold: 1
-      expected_status_codes:
-        - 200
+app_id: da_KWgIvtQUywJW
+annotations:
+  anybuild.run/config:
+    commands:
+      start: node server.js
+    edgejs_enable: true
+    edgejs_precompile: true
+    name: out
+    node_install_inputs:
+    - package.json
+    node_package_manager: npm
+    node_package_name: canedo-agua-inteligente
+    node_remove_native_binaries: true
+    node_server: express
+    npm_version: '11'
+    services:
+    - engine: postgres
+      name: database
+  anybuild.run/provider: node
+  anybuild.run/version: 0.33.1
+  wasmer.io/version: 7.5.0
+enableDatabase: true
