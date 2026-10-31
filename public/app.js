@@ -70,6 +70,23 @@ async function loadDashboard() {
   $('#rainfall').textContent = data.conditions.rainfall;
   $('#dry-days').textContent = data.conditions.dryDays;
   $('#updated-at').textContent = `Atualizado às ${new Date(data.updatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  
+  if ($('#current-temp')) {
+    $('#current-temp').textContent = `${data.conditions.temperature}°C`;
+  }
+}
+
+$('#theme-toggle').addEventListener('click', () => {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  $('#theme-toggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('theme', newTheme);
+});
+
+if (localStorage.getItem('theme') === 'dark') {
+  document.documentElement.setAttribute('data-theme', 'dark');
+  $('#theme-toggle').textContent = '☀️';
 }
 
 $('#consumption-form').addEventListener('submit', async (event) => {
