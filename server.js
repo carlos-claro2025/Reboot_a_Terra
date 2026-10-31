@@ -66,7 +66,7 @@ app.get('/api/reports', async (req, res, next) => {
   try { res.json({ reports: await listReports(req.query.type ? String(req.query.type) : null) }); } catch (error) { next(error); }
 });
 
-app.post('/api/reports', (req, res, next) => {
+app.post('/api/reports', async (req, res, next) => {
   try {
     const { type, title, description, neighborhood, lat, lng } = req.body || {};
     if (!['vazamento', 'falta-agua', 'qualidade', 'outro'].includes(type)) throw badRequest('Tipo de relato inválido.');
