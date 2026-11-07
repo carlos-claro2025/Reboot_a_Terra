@@ -1,71 +1,43 @@
-# Canedo Água Inteligente
+# Canedo Água Inteligente - MVP Hackathon
 
-MVP funcional, local e em português para apoiar decisões sobre água em Senador Canedo-GO.
+MVP em Node.js + Express para orientar moradores e pequenos produtores de Senador Canedo-GO no período seco. O dashboard usa dados demonstrativos simulados, sempre identificados como tais.
 
-## Rodar localmente
+## 🚀 Funcionalidades
+- **Painel de Risco Hídrico:** Monitoramento de temperatura, umidade e sequência seca.
+- **Mapa Interativo:** Seleção de pontos geográficos para análise local.
+- **Calculadora de Consumo:** Estimativa de gasto diário de água por residência.
+- **Recomendação de Irrigação:** Sugestões baseadas em cultura (Alface, Tomate, Milho) e clima.
+- **Análise de Folhas:** Heurística de cor para detecção de estresse hídrico via upload de foto.
+- **Relatos Comunitários:** Sistema de crowdsourcing de faltas de água.
+- **Assistente AI:** Chat para dúvidas sobre consumo e economia.
+- **Transparência:** Página de fontes de dados, licenças e alinhamento com ODS 6, 11, 12 e 13.
 
-Requisitos: Node.js 18 ou superior.
+## Executar
 
 ```bash
 npm install
+npm test
 npm start
 ```
 
-Abra `http://localhost:3000`. Para desenvolvimento, use `npm run dev`. Os testes rodam com `npm test`.
+Abra `http://localhost:3000`.
 
-## Arquitetura
+## API
 
-- `server.js`: servidor Express e API REST.
-- `lib/rules.js`: regras determinísticas de risco hídrico, consumo, irrigação e assistente local.
-- `lib/storage.js`: persistência PostgreSQL no Wasmer, com fallback JSON local.
-- `lib/weather.js`: dados atuais via Open-Meteo com cache de 10 minutos e fallback demonstrativo.
-- `public/`: frontend estático responsivo (HTML, CSS e JavaScript).
-- `data/reports.json`: persistência local dos relatos comunitários.
+- `GET /api/dashboard`: indicadores e risco demonstrativo.
+- `POST /api/consumption`: estima consumo com `residents`, `showers`, `laundry`, `hose`.
+- `POST /api/irrigation`: recomenda irrigação com cultura e condições climáticas.
+- `GET/POST /api/reports`: lista e registra relatos comunitários.
+- `POST /api/leaf-analysis`: análise de cor de folha.
+- `GET /api/about`: informações de ODS e fontes.
+- `POST /api/assistant`: orientação local sem chave de IA.
 
-O projeto usa Open-Meteo no backend para dados atuais quando disponível, sem chave obrigatória, e retorna dados demonstrativos quando a rede falha. No Wasmer, `app.yaml` pode provisionar PostgreSQL; localmente, sem as variáveis `DB_*`, a aplicação usa JSON. O assistente tem fallback local por regras e não expõe segredos no navegador.
+Relatos são gravados em `data/reports.json`. Eles não são confirmação oficial de falta d’água. Integrações futuras devem ser implementadas no backend, com segredos em variáveis de ambiente.
 
-O frontend também funciona como PWA: pode ser instalado no celular e possui cache offline para a interface e fallback local para cálculos, relatos e orientações. A comunidade oferece lista e mapa esquemático sem depender de um provedor de mapas; quando há coordenadas, cada relato pode abrir no OpenStreetMap.
+## Escopo e limitações
 
-## Endpoints
-
-- `GET /api/health`: saúde do serviço.
-- `GET /api/dashboard`: condições e risco hídrico explicável.
-- `POST /api/consumption`: calcula consumo residencial.
-- `POST /api/irrigation`: recomenda volume, duração e frequência de irrigação.
-- `GET /api/reports`: lista relatos; aceita filtro `?type=`.
-- `POST /api/reports`: cria relato com `type`, `title`, `description` e `neighborhood`.
-- `POST /api/assistant`: responde orientação local com `{ "message": "..." }`.
-
-Relatos aceitam opcionalmente `lat` e `lng`. A API aplica validação de coordenadas, cabeçalhos básicos de segurança e um limite simples de 60 requisições por minuto por endereço IP.
-
-## Configuração operacional
-
-O `app.yaml` configura PostgreSQL gerenciado no Wasmer na região `ca-beau1` e um health check em `/api/health`. As variáveis `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME` e `DB_PASSWORD` são injetadas pelo Wasmer. Localmente, sem elas, a aplicação usa `data/reports.json`.
-
-Opcionalmente, defina `WEATHER_LATITUDE` e `WEATHER_LONGITUDE` para ajustar o ponto consultado na Open-Meteo. A consulta tem cache de 10 minutos e fallback demonstrativo.
-
-Para deploy:
-
-```bash
-wasmer deploy --build-remote
-```
-
-O Wasmer também oferece conexão com GitHub para deploy automático da branch `main`, secrets em `Settings > Environment Vars`, domínio personalizado em `Domains` e logs pela CLI:
-
-```bash
-wasmer app logs carlosklaro/canedo-agua-inteligente --watch
-```
-
-## Próximos passos que ainda exigem configuração
-
-- Implementar autenticação/moderação de usuários (Wasmer não fornece login final pronto).
-- Configurar domínio próprio, política de privacidade e termos de uso.
-- Ativar monitoramento externo e alertas de disponibilidade.
-
-## Limitações e fontes
-
-Este é um MVP demonstrativo: não representa dados oficiais em tempo real, não substitui orientação da concessionária ou de profissionais e as fórmulas são aproximações educativas. Os valores de consumo foram inspirados em referências públicas de uso doméstico e a lógica climática é uma heurística transparente para prototipação. Uma evolução deve integrar pluviômetros, dados oficiais e autenticação/moderação dos relatos.
+O índice hídrico é explicável e educativo. Não substitui órgãos oficiais, concessionária, hidrômetro ou orientação agronômica. Uma evolução pode conectar fontes meteorológicas e comunicados oficiais, adicionar mapa geográfico e PWA offline.
 
 ## Licença
 
-MIT. Consulte o arquivo `LICENSE`.
+MIT.

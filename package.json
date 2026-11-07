@@ -2,15 +2,12 @@
   "name": "canedo-agua-inteligente",
   "version": "1.0.0",
   "private": true,
-  "description": "MVP local do Canedo Água Inteligente para Senador Canedo-GO",
-  "main": "server.js",
+  "description": "MVP de monitoramento e economia de água para Senador Canedo-GO",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js",
     "test": "node --test"
   },
   "dependencies": {
-    "express": "^4.21.2",
-    "pg": "^8.13.1"
+    "express": "^4.21.2"
   }
 }
