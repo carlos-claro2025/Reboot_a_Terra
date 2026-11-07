@@ -77,9 +77,15 @@ async function loadReports(filterNeighborhood = null) {
       filtered = reports.filter(r => r.neighborhood && r.neighborhood.toLowerCase().includes(filterNeighborhood.toLowerCase()));
     }
 
+    // Sort: Verified reports first
+    filtered.sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0));
+
     const title = filterNeighborhood ? `Relatos em: ${filterNeighborhood}` : "Relatos Comunitários";
     
-    $("#reports").innerHTML = `<h3>${esc(title)}</h3>` + (filtered.length ? filtered.map(x => `<article class="report"><b>${esc(x.type)}</b> · ${esc(x.neighborhood || "bairro não informado")}<br>${esc(x.description)}<br><small>${esc(x.source)}</small></article>`).join("") : `<p class='muted'>Nenhum relato encontrado para ${filterNeighborhood || "esta região"}.</p>`);
+    $("#reports").innerHTML = `<h3>${esc(title)}</h3>` + (filtered.length ? filtered.map(x => {
+      const badge = x.verified ? `<span style="background:#3b82f6; color:#fff; font-size:.7rem; padding:2px 6px; border-radius:4px; margin-right:5px;">✅ Oficial</span>` : "";
+      return `<article class="report">${badge}<b>${esc(x.type)}</b> · ${esc(x.neighborhood || "bairro não informado")}<br>${esc(x.description)}<br><small>${esc(x.source)}</small></article>`;
+    }).join("") : `<p class='muted'>Nenhum relato encontrado para ${filterNeighborhood || "esta região"}.</p>`);
   } catch (e) {
     $("#reports").innerHTML = `<p class="muted">Erro ao carregar relatos.</p>`;
   }
