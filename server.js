@@ -1,7 +1,9 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const fs = require("fs");
 const path = require("path");
 const { randomUUID } = require("crypto");
+const { fetchClimate } = require("./lib/climate");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,6 +12,15 @@ const reportsFile = path.join(dataDir, "reports.json");
 
 app.use(express.json({ limit: "50kb" }));
 app.use(express.static(path.join(__dirname, "public")));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas requisições. Aguarde alguns minutos antes de tentar novamente." }
+});
+app.use("/api", apiLimiter);
 
 const demoClimate = {
   city: "Senador Canedo",
@@ -21,8 +32,7 @@ const demoClimate = {
   forecastRain: 2
 };
 
-function riskFromClimate(c) {
-  let score = 0;
+function riskFromClimate(c) {  let score = 0;
   if (c.daysWithoutRain >= 5) score += 2;
   if (c.daysWithoutRain >= 10) score += 2;
   if (c.temperature >= 34) score += 2;
@@ -69,19 +79,64 @@ function saveReports(reports) {
   fs.writeFileSync(reportsFile, JSON.stringify(reports, null, 2));
 }
 
-app.get("/api/dashboard", (_req, res) => {
-  const risk = riskFromClimate(demoClimate);
-  res.json({
-    climate: demoClimate,
-    risk,
-    recommendation: "Evite lavar calçadas e veículos. Se tiver horta, irrigue antes das 8h.",
-    disclaimer: "O modo demonstração usa dados simulados e não representa comunicado oficial."
-  });
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
+function invalid(value, min, max) {
+  return !Number.isFinite(Number(value)) || Number(value) < min || Number(value) > max;
+}
+
+function validateIrrigationBody(body) {
+  const crop = String(body.crop || "").trim();
+  if (!crop || crop.length > 80) return { error: "Informe a cultura (até 80 caracteres)." };
+  if (invalid(body.temperature, -10, 60)) return { error: "Temperatura deve estar entre -10°C e 60°C." };
+  if (invalid(body.humidity, 0, 100)) return { error: "Umidade deve estar entre 0% e 100%." };
+  if (invalid(body.forecastRain, 0, 500)) return { error: "Chuva prevista deve estar entre 0mm e 500mm." };
+  if (invalid(body.hour, 0, 23)) return { error: "Horário deve ser um número inteiro entre 0 e 23." };
+  return {
+    crop,
+    temperature: Number(body.temperature),
+    humidity: Number(body.humidity),
+    forecastRain: Number(body.forecastRain),
+    hour: Math.trunc(Number(body.hour))
+  };
+}
+
+app.get("/api/dashboard", async (_req, res) => {
+  try {
+    const climate = await fetchClimate();
+    const risk = riskFromClimate(climate);
+    res.json({
+      climate,
+      risk,
+      recommendation: "Evite lavar calçadas e veículos. Se tiver horta, irrigue antes das 8h.",
+      disclaimer: "Dados abertos de tempo. O índice é educativo e não representa comunicado oficial."
+    });
+  } catch (_error) {
+    const risk = riskFromClimate(demoClimate);
+    res.json({
+      climate: demoClimate,
+      risk,
+      recommendation: "Evite lavar calçadas e veículos. Se tiver horta, irrigue antes das 8h.",
+      disclaimer: "O modo demonstração usa dados simulados e não representa comunicado oficial."
+    });
+  }
 });
 
 app.post("/api/consumption", (req, res) => {
   try {
-    const liters = estimateConsumption(req.body);
+    const { residents, showers, laundry, hose } = req.body || {};
+    if (invalid(residents, 1, 30)) return res.status(400).json({ error: "Informe o número de moradores entre 1 e 30." });
+    if (invalid(showers, 0, 10)) return res.status(400).json({ error: "Informe o número de chuveiros entre 0 e 10." });
+    if (invalid(laundry, 0, 10)) return res.status(400).json({ error: "Informe a frequência de lavagem de roupa entre 0 e 10 por semana." });
+
+    const liters = estimateConsumption({
+      residents: Math.trunc(Number(residents)),
+      showers: Number(showers),
+      laundry: Number(laundry),
+      hose: hose === true
+    });
     res.json({ litersPerDay: liters, message: "Estimativa educativa; não substitui a leitura do hidrômetro." });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -89,17 +144,9 @@ app.post("/api/consumption", (req, res) => {
 });
 
 app.post("/api/irrigation", (req, res) => {
-  const { crop, temperature, humidity, forecastRain, hour } = req.body;
-  if (!crop || [temperature, humidity, forecastRain, hour].some((v) => !Number.isFinite(Number(v)))) {
-    return res.status(400).json({ error: "Informe cultura, temperatura, umidade, chuva prevista e horário." });
-  }
-  res.json({ recommendation: irrigationRecommendation({
-    crop: String(crop).slice(0, 60),
-    temperature: Number(temperature),
-    humidity: Number(humidity),
-    forecastRain: Number(forecastRain),
-    hour: Number(hour)
-  }) });
+  const check = validateIrrigationBody(req.body || {});
+  if (check.error) return res.status(400).json({ error: check.error });
+  res.json({ recommendation: irrigationRecommendation(check) });
 });
 
 app.get("/api/reports", (_req, res) => res.json({ reports: readReports() }));
