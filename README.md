@@ -23,6 +23,13 @@ npm start
 
 Abra `http://localhost:3000`.
 
+### Variáveis de Ambiente
+Crie um arquivo `.env` na raiz do projeto com as seguintes chaves:
+- `SUPABASE_URL`: URL do seu projeto Supabase.
+- `SUPABASE_KEY`: Chave anônima (anon key) do Supabase.
+- `GEMINI_API_KEY`: Chave de API do Google Gemini.
+- `SENTRY_DSN`: DSN do projeto Sentry para monitoramento de erros.
+
 ### Docker (imagem pronta para deploy/hackathon)
 
 ```bash

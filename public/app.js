@@ -1,3 +1,29 @@
+// Theme Toggle Logic
+$("#themeToggle").addEventListener("click", () => {
+  const isDark = document.body.getAttribute("data-theme") === "dark";
+  document.body.setAttribute("data-theme", isDark ? "light" : "dark");
+  $("#themeToggle").textContent = isDark ? "🌙 Dark Mode" : "☀️ Light Mode";
+  localStorage.setItem("theme", isDark ? "light" : "dark");
+});
+if (localStorage.getItem("theme") === "dark") {
+  document.body.setAttribute("data-theme", "dark");
+  $("#themeToggle").textContent = "☀️ Light Mode";
+}
+
+function showToast(message, type = "info") {
+  let container = $(".toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
 const $ = (s) => document.querySelector(s);
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 async function api(url, options) { const r = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options }); const data = await r.json(); if (!r.ok) throw new Error(data.error || "Não foi possível concluir."); return data; }
@@ -20,17 +46,32 @@ let climateCache = null;
 async function ensureClimate() { if (!climateCache) { const d = await loadDashboard(); climateCache = d.climate; } return climateCache; }
 $("#consumption").addEventListener("submit", async e => { e.preventDefault(); try { const d = await api("/api/consumption", {method:"POST",body:JSON.stringify(formData(e.target))}); $("#consumptionResult").textContent = `Estimativa: ${d.litersPerDay} litros/dia. ${d.message}`; } catch (x) { $("#consumptionResult").textContent = x.message; }});
 $("#irrigation").addEventListener("submit", async e => { e.preventDefault(); try { const c = await ensureClimate(); const d = await api("/api/irrigation", {method:"POST",body:JSON.stringify({...formData(e.target),temperature:c.temperature,humidity:c.humidity,forecastRain:c.forecastRain ?? 2})}); $("#irrigationResult").textContent = d.recommendation; } catch (x) { $("#irrigationResult").textContent = x.message; }});
-$("#report").addEventListener("submit", async e => { e.preventDefault(); try { await api("/api/reports", {method:"POST",body:JSON.stringify(formData(e.target))}); e.target.reset(); await loadReports(); } catch (x) { alert(x.message); }});
+$("#report").addEventListener("submit", async e => { e.preventDefault(); try { await api("/api/reports", {method:"POST",body:JSON.stringify(formData(e.target))}); e.target.reset(); await loadReports(); showToast("Relato registrado com sucesso!", "success"); } catch (x) { showToast(x.message, "error"); }});
 $("#assistant").addEventListener("submit", async e => { e.preventDefault(); const f=formData(e.target); const chat = $("#chat"); chat.innerHTML += `<div class="bubble user">${esc(f.message)}</div>`; try { const d=await api("/api/assistant",{method:"POST",body:JSON.stringify(f)}); chat.innerHTML += `<div class="bubble">${esc(d.answer)}</div>`; } catch (x) { chat.innerHTML += `<div class="bubble">${esc(x.message)}</div>`; } chat.scrollTop = chat.scrollHeight; e.target.reset(); });
 function initMap() {
   if (typeof L === "undefined") { $("#mapResult").textContent = "Mapa indisponível: a biblioteca de mapas não carregou."; return; }
   const center = [-16.708, -49.091];
   const map = L.map("map").setView(center, 12);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(map);
-  map.on("click", (e) => {
+  map.on("click", async (e) => {
     const { lat, lng } = e.latlng;
     L.marker([lat, lng]).addTo(map).bindPopup(`Ponto selecionado: ${lat.toFixed(4)}, ${lng.toFixed(4)}`).openPopup();
     $("#mapResult").textContent = `Ponto selecionado em Senador Canedo: latitude ${lat.toFixed(4)}, longitude ${lng.toFixed(4)}.`;
+    
+    // Simulação de filtro por região/bairro baseado na coordenada (em um app real, usaríamos reverse geocoding)
+    // Para o MVP, vamos simular que cliques em certas áreas filtram bairros específicos.
+    let neighborhoodFilter = "";
+    if (lat > -16.71 && lng < -49.08) neighborhoodFilter = "Centro";
+    else if (lat < -16.71 && lng > -49.10) neighborhoodFilter = "Setor Oeste";
+    else neighborhoodFilter = "Região Norte";
+
+    try {
+      const { reports } = await api("/api/reports");
+      const filtered = reports.filter(r => r.neighborhood && r.neighborhood.toLowerCase().includes(neighborhoodFilter.toLowerCase()));
+      $("#reports").innerHTML = filtered.length ? filtered.map(x => `<article class="report"><b>${esc(x.type)}</b> · ${esc(x.neighborhood || "bairro não informado")}<br>${esc(x.description)}<br><small>${esc(x.source)}</small></article>`).join("") : `<p class='muted'>Nenhum relato encontrado para ${neighborhoodFilter}.</p>`;
+    } catch (x) {
+      console.error("Erro ao filtrar relatos:", x);
+    }
   });
 }
 async function analyzeLeaf(file, crop) {
@@ -51,7 +92,11 @@ $("#leaf").addEventListener("submit", async e => {
   e.preventDefault();
   const file = e.target.photo.files[0];
   if (!file) { $("#leafResult").textContent = "Selecione uma imagem."; return; }
-  try { const d = await analyzeLeaf(file, e.target.crop.value); $("#leafResult").textContent = `${esc(d.analysis)} ${esc(d.disclaimer)}`; }
+  try { 
+    const d = await analyzeLeaf(file, e.target.crop.value); 
+    const statusClass = d.color === 'green' ? 'result-healthy' : d.color === 'yellow' ? 'result-moderate' : 'result-stress';
+    $("#leafResult").innerHTML = `<span class="${statusClass}">${esc(d.analysis)}</span><br><small class="muted">${esc(d.disclaimer)}</small>`; 
+  }
   catch (x) { $("#leafResult").textContent = esc(x.message); }
 });
 ensureClimate().catch(console.error); loadReports().catch(console.error); loadAbout().catch(console.error); initMap();

@@ -4,13 +4,45 @@ const fs = require("fs");
 const path = require("path");
 const { randomUUID } = require("crypto");
 const { fetchClimate } = require("./lib/climate");
+require("dotenv").config();
+const { createClient } = require("@supabase/supabase-js");
+const NodeCache = require("node-cache");
+const winston = require("winston");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Sentry = require("@sentry/node");
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  tracesSampleRate: 1.0,
+});
+
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console({ format: winston.format.simple() }),
+    new winston.transports.File({ filename: "app.log" })
+  ]
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, "data");
 const reportsFile = path.join(dataDir, "reports.json");
 
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const climateCache = new NodeCache({ stdTTL: 1800 });
+
 app.use(express.json({ limit: "50kb" }));
+
+app.use((err, req, res, next) => {
+  Sentry.captureException(err);
+  logger.error(`Erro não tratado: ${err.message}`);
+  res.status(500).json({ error: "Erro interno do servidor." });
+});
 app.use(express.static(path.join(__dirname, "public")));
 
 const apiLimiter = rateLimit({
@@ -53,9 +85,9 @@ function irrigationRecommendation({ crop, temperature, humidity, forecastRain, h
 
 function interpretLeaf({ red, green, blue, crop }) {
   const dominance = green - Math.max(red, blue);
-  if (dominance < 15) return `A imagem apresenta pouca dominância verde, o que pode indicar estresse hídrico, amarelecimento ou deficiência nutricional em ${crop}. Recomenda-se inspeção presencial e orientação agronômica.`;
-  if (dominance < 35) return `A coloração sugere verde moderado em ${crop}. Monitore as folhas nos próximos dias e mantenha a irrigação recomendada.`;
-  return `A imagem apresenta coloração verde saudável para ${crop}. Mantenha o plano de irrigação e o monitoramento de rotina.`;
+  if (dominance < 15) return { text: `A imagem apresenta pouca dominância verde, o que pode indicar estresse hídrico, amarelecimento ou deficiência nutricional em ${crop}. Recomenda-se inspeção presencial e orientação agronômica.`, color: "red" };
+  if (dominance < 35) return { text: `A coloração sugere verde moderado em ${crop}. Monitore as folhas nos próximos dias e mantenha a irrigação recomendada.`, color: "yellow" };
+  return { text: `A imagem apresenta coloração verde saudável para ${crop}. Mantenha o plano de irrigação e o monitoramento de rotina.`, color: "green" };
 }
 
 function estimateConsumption({ residents, showers, laundry, hose }) {
@@ -68,15 +100,16 @@ function estimateConsumption({ residents, showers, laundry, hose }) {
   return Math.round(showerLiters + toiletLiters + laundryLiters + cleaningLiters);
 }
 
-function readReports() {
-  fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(reportsFile)) fs.writeFileSync(reportsFile, "[]");
-  return JSON.parse(fs.readFileSync(reportsFile, "utf8"));
+async function readReports() {
+  const { data, error } = await supabase.from("reports").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
 }
 
-function saveReports(reports) {
-  fs.mkdirSync(dataDir, { recursive: true });
-  fs.writeFileSync(reportsFile, JSON.stringify(reports, null, 2));
+async function saveReports(report) {
+  const { data, error } = await supabase.from("reports").insert([report]).select();
+  if (error) throw error;
+  return data[0];
 }
 
 app.get("/api/health", (_req, res) => {
@@ -105,7 +138,19 @@ function validateIrrigationBody(body) {
 
 app.get("/api/dashboard", async (_req, res) => {
   try {
+    const cachedClimate = climateCache.get("current_climate");
+    if (cachedClimate) {
+      const risk = riskFromClimate(cachedClimate);
+      return res.json({
+        climate: cachedClimate,
+        risk,
+        recommendation: "Evite lavar calçadas e veículos. Se tiver horta, irrigue antes das 8h.",
+        disclaimer: "Dados abertos de tempo (cache). O índice é educativo e não representa comunicado oficial."
+      });
+    }
+
     const climate = await fetchClimate();
+    climateCache.set("current_climate", climate);
     const risk = riskFromClimate(climate);
     res.json({
       climate,
@@ -149,26 +194,35 @@ app.post("/api/irrigation", (req, res) => {
   res.json({ recommendation: irrigationRecommendation(check) });
 });
 
-app.get("/api/reports", (_req, res) => res.json({ reports: readReports() }));
+app.get("/api/reports", async (_req, res) => {
+  try {
+    const reports = await readReports();
+    res.json({ reports });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao carregar relatos." });
+  }
+});
 
-app.post("/api/reports", (req, res) => {
+app.post("/api/reports", async (req, res) => {
   const { type, description, neighborhood } = req.body;
   const allowed = ["falta", "pressao", "vazamento", "outro"];
   if (!allowed.includes(type) || typeof description !== "string" || description.trim().length < 5) {
     return res.status(400).json({ error: "Tipo e descrição válida são obrigatórios." });
   }
-  const reports = readReports();
   const report = {
     id: randomUUID(),
     type,
     description: description.trim().slice(0, 500),
     neighborhood: typeof neighborhood === "string" ? neighborhood.trim().slice(0, 80) : "",
     source: "Relato comunitário não confirmado",
-    createdAt: new Date().toISOString()
+    created_at: new Date().toISOString()
   };
-  reports.unshift(report);
-  saveReports(reports.slice(0, 100));
-  res.status(201).json(report);
+  try {
+    const savedReport = await saveReports(report);
+    res.status(201).json(savedReport);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao salvar relato." });
+  }
 });
 
 app.post("/api/leaf-analysis", (req, res) => {
@@ -176,8 +230,10 @@ app.post("/api/leaf-analysis", (req, res) => {
   if ([red, green, blue].some((v) => !Number.isFinite(Number(v)) || Number(v) < 0 || Number(v) > 255)) {
     return res.status(400).json({ error: "Envie os valores médios de cor da imagem (0 a 255)." });
   }
+  const result = interpretLeaf({ red: Number(red), green: Number(green), blue: Number(blue), crop: String(crop || "cultura").slice(0, 60) });
   res.json({
-    analysis: interpretLeaf({ red: Number(red), green: Number(green), blue: Number(blue), crop: String(crop || "cultura").slice(0, 60) }),
+    analysis: result.text,
+    color: result.color,
     disclaimer: "Heurística local de cor em modo demonstração. Não substitui diagnóstico agronômico."
   });
 });
@@ -203,15 +259,38 @@ app.get("/api/about", (_req, res) => {
   });
 });
 
-app.post("/api/assistant", (req, res) => {
-  const message = String(req.body.message || "").toLowerCase();
-  let answer = "Priorize consumo essencial, corrija vazamentos e siga comunicados oficiais. Esta orientação é educativa.";
-  if (message.includes("irrig") || message.includes("horta")) answer = "Irrigue antes das 8h, evite o período mais quente e cubra o solo com palha.";
-  if (message.includes("banho") || message.includes("consumo")) answer = "Reduza o tempo de banho, feche a torneira ao ensaboar e reutilize água sempre que for seguro.";
-  if (message.includes("racionamento") || message.includes("falta")) answer = "Não confirmo racionamento sem fonte oficial. Consulte os canais da concessionária e da Prefeitura.";
-  res.json({ answer, mode: "fallback local" });
+app.post("/api/assistant", async (req, res) => {
+  const message = String(req.body.message || "").trim();
+  if (!message) return res.status(400).json({ error: "Mensagem vazia." });
+
+  try {
+    const climate = await fetchClimate().catch(() => demoClimate);
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `Você é o assistente inteligente do projeto "Canedo Água Inteligente" em Senador Canedo-GO.
+Contexto climático atual:
+- Temperatura: ${climate.temperature}°C
+- Umidade: ${climate.humidity}%
+- Chuva acumulada: ${climate.rainfall}mm
+- Dias sem chuva: ${climate.daysWithoutRain}
+- Previsão de chuva: ${climate.forecastRain}mm
+
+Pergunta do usuário: ${message}
+\nResponda de forma concisa, útil e educativa, focando em economia de água e resiliência hídrica.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    res.json({ answer: response.text(), mode: "Gemini AI" });
+  } catch (error) {
+    logger.error("Erro no assistente Gemini:", error);
+    res.json({ 
+      answer: "Priorize consumo essencial, corrija vazamentos e siga comunicados oficiais. Esta orientação é educativa.", 
+      mode: "fallback local" 
+    });
+  }
 });
 
-if (require.main === module) app.listen(PORT, () => console.log(`Canedo Água Inteligente em http://localhost:${PORT}`));
+if (require.main === module) app.listen(PORT, () => logger.info(`Canedo Água Inteligente em http://localhost:${PORT}`));
 
 module.exports = { app, riskFromClimate, irrigationRecommendation, estimateConsumption, interpretLeaf };
