@@ -33,14 +33,16 @@ const PORT = process.env.PORT || 3000;
 const dataDir = path.join(__dirname, "data");
 const reportsFile = path.join(dataDir, "reports.json");
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_URL !== "your_supabase_url" && process.env.SUPABASE_KEY && process.env.SUPABASE_KEY !== "your_supabase_anon_key") 
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY) 
+  : null;
 const climateCache = new NodeCache({ stdTTL: 1800 });
 
 app.use(express.json({ limit: "50kb" }));
 
 app.use((err, req, res, next) => {
   Sentry.captureException(err);
-  logger.error(`Erro não tratado: ${err.message}`);
+  logger.error(`Erro não tratado: ${err.message}`, { stack: err.stack });
   res.status(500).json({ error: "Erro interno do servidor." });
 });
 app.use(express.static(path.join(__dirname, "public")));
@@ -101,12 +103,18 @@ function estimateConsumption({ residents, showers, laundry, hose }) {
 }
 
 async function readReports() {
+  if (!supabase) {
+    throw new Error("Supabase não configurado.");
+  }
   const { data, error } = await supabase.from("reports").select("*").order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 }
 
 async function saveReports(report) {
+  if (!supabase) {
+    throw new Error("Supabase não configurado.");
+  }
   const { data, error } = await supabase.from("reports").insert([report]).select();
   if (error) throw error;
   return data[0];

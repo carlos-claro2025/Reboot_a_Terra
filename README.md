@@ -56,7 +56,7 @@ Há um workflow `.github/workflows/ci.yml` que roda `npm ci` e `npm test` no Nod
 - `GET /api/about`: informações de ODS e fontes.
 - `POST /api/assistant`: orientação local sem chave de IA.
 
-Relatos são gravados em `data/reports.json`. Eles não são confirmação oficial de falta d’água. Integrações futuras devem ser implementadas no backend, com segredos em variáveis de ambiente.
+Relatos são gravados no Supabase. Eles não são confirmação oficial de falta d’água. Integrações futuras devem ser implementadas no backend, com segredos em variáveis de ambiente.
 
 ## Documentação
 
