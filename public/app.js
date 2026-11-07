@@ -68,10 +68,18 @@ async function loadDashboard() {
   }
 }
 
-async function loadReports() {
+async function loadReports(filterNeighborhood = null) {
   try {
     const { reports } = await api("/api/reports");
-    $("#reports").innerHTML = reports.length ? reports.map(x => `<article class="report"><b>${esc(x.type)}</b> · ${esc(x.neighborhood || "bairro não informado")}<br>${esc(x.description)}<br><small>${esc(x.source)}</small></article>`).join("") : "<p class='muted'>Ainda não há relatos.</p>";
+    let filtered = reports;
+    
+    if (filterNeighborhood) {
+      filtered = reports.filter(r => r.neighborhood && r.neighborhood.toLowerCase().includes(filterNeighborhood.toLowerCase()));
+    }
+
+    const title = filterNeighborhood ? `Relatos em: ${filterNeighborhood}` : "Relatos Comunitários";
+    
+    $("#reports").innerHTML = `<h3>${esc(title)}</h3>` + (filtered.length ? filtered.map(x => `<article class="report"><b>${esc(x.type)}</b> · ${esc(x.neighborhood || "bairro não informado")}<br>${esc(x.description)}<br><small>${esc(x.source)}</small></article>`).join("") : `<p class='muted'>Nenhum relato encontrado para ${filterNeighborhood || "esta região"}.</p>`);
   } catch (e) {
     $("#reports").innerHTML = `<p class="muted">Erro ao carregar relatos.</p>`;
   }
@@ -167,13 +175,8 @@ function initMap() {
     else if (lat < -16.71 && lng > -49.10) neighborhoodFilter = "Setor Oeste";
     else neighborhoodFilter = "Região Norte";
 
-    try {
-      const { reports } = await api("/api/reports");
-      const filtered = reports.filter(r => r.neighborhood && r.neighborhood.toLowerCase().includes(neighborhoodFilter.toLowerCase()));
-      $("#reports").innerHTML = filtered.length ? filtered.map(x => `<article class="report"><b>${esc(x.type)}</b> · ${esc(x.neighborhood || "bairro não informado")}<br>${esc(x.description)}<br><small>${esc(x.source)}</small></article>`).join("") : `<p class='muted'>Nenhum relato encontrado para ${neighborhoodFilter}.</p>`;
-    } catch (x) {
-      console.error("Erro ao filtrar relatos:", x);
-    }
+    showToast(`Filtrando relatos para: ${neighborhoodFilter}`, "info");
+    await loadReports(neighborhoodFilter);
   });
 }
 
@@ -204,7 +207,6 @@ $("#leaf").addEventListener("submit", async e => {
   catch (x) { $("#leafResult").textContent = esc(x.message); }
 });
 
-// Initialize everything on load
 document.addEventListener("DOMContentLoaded", () => {
   ensureClimate().catch(console.error); 
   loadReports().catch(console.error); 
