@@ -1,91 +1,46 @@
-# 💧 Canedo Água Inteligente.
-> **Solução Inteligente para Gestão Hídrica em Senador Canedo-GO**
+# 💧 Canedo Água Inteligente
 
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
-![Gemini AI](https://img.shields.io/badge/Google_Gemini_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
-![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
-
----
-
-## 🌟 Sobre o Projeto
-O **Canedo Água Inteligente** é um MVP desenvolvido para o Hackathon, focado em mitigar os impactos da escassez hídrica em Senador Canedo-GO, especialmente no período crítico entre agosto e outubro. A plataforma une dados climáticos em tempo real, inteligência artificial e colaboração comunitária para apoiar moradores e pequenos produtores.
+## 🌟 Visão Geral
+O **Canedo Água Inteligente** é um MVP (Produto Mínimo Viável) desenvolvido para enfrentar a escassez hídrica recorrente em Senador Canedo, GO, especialmente no período crítico entre agosto e outubro. O projeto transforma dados climáticos e relatos comunitários em informações acionáveis para a população e gestores públicos.
 
 ## 🚀 Funcionalidades Principais
 
-### 📊 Monitoramento & Análise
-- **Painel de Risco Hídrico:** Dados reais da **Open-Meteo** com fallback inteligente para modo offline.
-- **Análise de Folhas 🍃:** Heurística de cor para detecção de estresse hídrico via upload de foto.
-- **Mapa Interativo 🗺️:** Visualização e filtragem de pontos geográficos de escassez.
+### 📊 Dashboard de Risco Hídrico
+- **Dados em Tempo Real**: Integração com a API Open-Meteo para monitoramento de temperatura e precipitação.
+- **Análise de Risco**: Cálculo automático de risco hídrico baseado em dados climáticos atuais.
+- **Recomendações Inteligentes**: Sugestões de irrigação e economia de água adaptadas ao clima do dia.
 
-### 💡 Ferramentas de Apoio
-- **Assistente AI 🤖:** Chat inteligente via **Google Gemini** para orientações agronômicas e de economia.
-- **Calculadora de Consumo 🚰:** Estimativa de gasto diário residencial personalizada.
-- **Guia de Irrigação 🌽:** Recomendações baseadas na cultura (Alface, Tomate, Milho) e clima atual.
+### 🤖 Assistente AI (Powered by Google Gemini)
+- **Consultoria Especializada**: Chatbot treinado para responder dúvidas sobre gestão de água e crises hídricas especificamente para a região de Senador Canedo.
+- **Respostas Práticas**: Orientações rápidas sobre como lidar com a falta de água e técnicas de preservação.
 
-### 🤝 Colaboração & Transparência
-- **Relatos Comunitários:** Sistema de crowdsourcing para mapear faltas de água em tempo real.
-- **Alinhamento Global:** Projeto conectado aos ODS 6, 11, 12 e 13 da ONU.
+### 🗺️ Mapa de Relatos Comunitários
+- **Crowdsourcing de Dados**: Sistema onde cidadãos podem reportar faltas de água em tempo real.
+- **Geolocalização**: Integração com Leaflet.js para visualização espacial dos problemas.
+- **Relatos Verificados**: Sistema de priorização para dados oficiais (SANESC/Defesa Civil).
 
----
+### 🌿 Heurística de Análise de Folhas
+- **Diagnóstico Visual**: Ferramenta que analisa a cor de folhas via upload de imagem para detectar estresse hídrico (amarelamento) usando a fórmula de contraste cromático.
 
-## 🛠️ Tecnologias Utilizadas
+## 🛠️ Arquitetura Técnica
 
-| Camada | Tecnologia | Finalidade |
-| :--- | :--- | :--- |
-| **Backend** | Node.js + Express | API REST e Lógica de Negócio |
-| **Frontend** | HTML5, CSS3, JS (Vanilla) | Interface Responsiva e PWA |
-| **Banco de Dados** | Supabase (PostgreSQL) | Armazenamento de Relatos Comunitários |
-| **IA** | Google Gemini API | Assistente Virtual Especializado |
-| **Clima** | Open-Meteo API | Dados Meteorológicos em Tempo Real |
-| **DevOps** | Docker + GitHub Actions | Containerização e CI/CD |
+### Stack Tecnológica
+- **Frontend**: HTML5, CSS3 (Mobile-First), JavaScript (ES6+).
+- **Backend**: Node.js com Express.
+- **Banco de Dados**: Supabase (PostgreSQL) via API REST.
+- **Inteligência Artificial**: Google Gemini Pro API.
+- **Infraestrutura**: Docker & Render.
 
----
+### Decisões de Engenharia
+- **Conexão REST Pura**: Para garantir máxima estabilidade e compatibilidade entre o ambiente de hospedagem (Render) e o banco de dados (Supabase), a comunicação foi implementada via requisições HTTP REST, eliminando dependências de WebSockets e conflitos de versão de Node.js.
+- **Segurança**: Implementação de `express-rate-limit` para proteção contra ataques de negação de serviço (DoS) e sanitização de inputs para prevenção de XSS.
+- **Performance**: Uso de `node-cache` para reduzir chamadas repetitivas a APIs externas, melhorando o tempo de resposta do dashboard.
 
-## ⚙️ Como Executar
+## 📦 Instalação e Deploy
 
-### Pré-requisitos
-- Node.js v20+
-- Conta no Supabase e Google AI Studio (para chaves de API)
-
-### Instalação e Setup
-1. **Clone o repositório:**
-   ```bash
-   git clone https://github.com/carlos-claro2025/Reboot_a_Terra.git
-   cd Reboot_a_Terra
-   ```
-
-2. **Instale as dependências:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure as Variáveis de Ambiente:**
-   Crie um arquivo `.env` na raiz:
-   ```env
-   SUPABASE_URL=sua_url_supabase
-   SUPABASE_KEY=sua_chave_supabase
-   GEMINI_API_KEY=sua_chave_gemini
-   SENTRY_DSN=seu_dsn_sentry
-   ```
-
-4. **Inicie o servidor:**
-   ```bash
-   npm start
-   ```
-   Acesse: `http://localhost:3000`
-
-### 🐳 Execução via Docker
-```bash
-docker build -t canedo-agua-inteligente .
-docker run -p 3000:3000 canedo-agua-inteligente
-```
-
----
-
-## 📖 Documentação Adicional
-- [📄 Apresentação do Hackathon (Slides)](docs/apresentacao.md)
-
-## ⚖️ Licença
-Este projeto está sob a licença **MIT**.
+### Variáveis de Ambiente Necessárias
+```env
+PORT=3000
+GEMINI_API_KEY=sua_chave_gemini
+SUPABASE_URL=seu_link_supabase
+SUPABASE_KEY=sua_chave_anon_public
