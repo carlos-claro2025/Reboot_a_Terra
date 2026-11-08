@@ -6,18 +6,42 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const path = require("path");
 
 const app = express();
-app.set("trust proxy", 1); // ESSENCIAL PARA RENDER/HEROKU/FLY.io
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.static("public"));
 
 const cache = new NodeCache({ stdTTL: 600 });
 
-// Supabase Config
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+// Supabase Config with Safety Check
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+let supabase = null;
 
-// Gemini AI Config
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+if (supabaseUrl && supabaseKey) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey);
+    console.log("✅ Supabase connected successfully");
+  } catch (e) {
+    console.error("❌ Supabase connection error:", e.message);
+  }
+} else {
+  console.warn("⚠️ Supabase credentials missing. Reports will be disabled.");
+}
+
+// Gemini AI Config with Safety Check
+const geminiKey = process.env.GEMINI_API_KEY;
+let model = null;
+if (geminiKey) {
+  try {
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    console.log("✅ Gemini AI connected successfully");
+  } catch (e) {
+    console.error("❌ Gemini AI connection error:", e.message);
+  }
+} else {
+  console.warn("⚠️ Gemini API key missing. AI Assistant will be disabled.");
+}
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -41,7 +65,7 @@ app.get("/api/dashboard", async (req, res) => {
         temperature: data.current.temperature_2m,
         humidity: data.current.relative_humidity_2m,
         rainfall: data.daily.precipitation_sum[0],
-        daysWithoutRain: 0, // Simplificado para MVP
+        daysWithoutRain: 0,
         source: "Open-Meteo (Real-time)"
       };
       cache.set("climate", climate);
@@ -60,6 +84,7 @@ app.get("/api/dashboard", async (req, res) => {
 });
 
 app.get("/api/reports", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Banco de dados offline." });
   try {
     const { data, error } = await supabase.from("reports").select("*").order("created_at", { ascending: false });
     if (error) throw error;
@@ -70,6 +95,7 @@ app.get("/api/reports", async (req, res) => {
 });
 
 app.post("/api/reports", async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: "Banco de dados offline." });
   try {
     const { type, neighborhood, description, source } = req.body;
     const { data, error } = await supabase.from("reports").insert([{ type, neighborhood, description, source, verified: false }]).select();
@@ -118,6 +144,7 @@ app.get("/api/about", (req, res) => {
 });
 
 app.post("/api/assistant", async (req, res) => {
+  if (!model) return res.status(503).json({ error: "Assistente AI offline." });
   try {
     const { message } = req.body;
     const prompt = `Você é um assistente especializado em gestão hídrica em Senador Canedo-GO. Responda de forma curta e útil: ${message}`;
