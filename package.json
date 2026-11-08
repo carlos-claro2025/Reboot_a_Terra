@@ -1,20 +1,17 @@
 {
   "name": "canedo-agua-inteligente",
   "version": "1.0.0",
-  "private": true,
-  "description": "MVP de monitoramento e economia de água para Senador Canedo-GO",
+  "description": "MVP para monitoramento de água em Senador Canedo",
+  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "node --test"
+    "start": "node server.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "@sentry/node": "^11.11.0",
-    "@supabase/supabase-js": "^2.119.0",
-    "dotenv": "^18.0.9",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.1",
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.2",
+    "express-rate-limit": "^7.1.5",
     "node-cache": "^5.1.2",
-    "winston": "^3.19.0"
+    "@google/generative-ai": "^0.1.0"
   }
 }
